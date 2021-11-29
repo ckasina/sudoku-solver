@@ -2,13 +2,13 @@ from copy import deepcopy
 
 
 class Puzzle:
-    def __init__(self, grid):
+    def __init__(self):
         """Puzzle class, used to complete various functions of Sudoku incl. solving
         :param grid: 2-dimensional 9x9 list storing the numbers in the puzzle"""
 
         self._rows = 9
         self._cols = 9
-        self._grid = grid
+        self._grid = [[0 for _ in range(self._cols)] for _ in range(self._rows)]
 
     def getGrid(self):
         """:return: Returns the puzzle as a 2-dimensional 9x9 list"""
@@ -88,8 +88,33 @@ class Puzzle:
             for col in range(self._cols):
                 self._grid[row][col] = 0
 
+    def getConflicts(self):
+        def getConflictsRow(row, col, num):
+            return [(row, c) for c in range(self._cols) if self.getCell(row, c) == num and c != col]
+
+        def getConflictsCol(row, col, num):
+            return [(r, col) for r in range(self._rows) if self.getCell(r, col) == num and r != row]
+
+        def getConflictsBox(row, col, num):
+            startRow = (row // 3) * 3
+            startCol = (col // 3) * 3
+            return [(r, c) for r in range(startRow, startRow + 3) for c in range(startCol, startCol + 3) if self.getCell(r, c) == num and r != row and c != col]
+
+        conflicts = []
+        for row in range(self._rows):
+            for col in range(self._cols):
+                if (row, col) in conflicts: continue
+                num = self.getCell(row, col)
+                if num == 0: continue
+                newConflicts = getConflictsBox(row, col, num) + getConflictsRow(row, col, num) + getConflictsCol(row, col, num)
+                if len(newConflicts) > 0:
+                    conflicts += [(row, col)] + newConflicts
+
+
+        return conflicts
+
     def checkConflict(self, row, col, num):
-        """Checks the box, row, and column of the specified cell for conflicts
+        """Checks the box, row, and column of the specified cell for conflicts if the cell was to be filled with the specified number
         :param row: Zero-based index of the row of the cell
         :param col: Zero-based index of the column of the cell
         :param num: The number to check for conflicts with
@@ -104,6 +129,7 @@ class Puzzle:
         def checkConflictCol(col, num):
             return num in self.getCol(col)
 
+        if num == 0: return False
         return (
             checkConflictBox(row, col, num)
             or checkConflictRow(row, num)
@@ -118,8 +144,7 @@ class Puzzle:
         if solvable:
             self._grid = deepcopy(newPuzzle._grid)
 
-        else:
-            print("Could not be solved!")
+        return solvable
 
     def backtrack(self, newPuzzle):
         """Recursive function that brute force attempts all the cells with valid numbers until solved
@@ -127,7 +152,7 @@ class Puzzle:
         :return: Boolean value representing whether the puzzle was solved"""
 
         row, col = newPuzzle.getNextEmpty()
-        if (row, col) == (None, None): 
+        if (row, col) == (None, None):
             # if there's no more empty cells then the puzzle is solved
             return True
 
@@ -136,12 +161,12 @@ class Puzzle:
             newPuzzle.setCell(row, col, num)
 
             # Continues recursively trying to solve the puzzle
-            if newPuzzle.backtrack(newPuzzle): 
+            if newPuzzle.backtrack(newPuzzle):
                 return True
             else:
                 # If the puzzle cannot be solved from inputting the number into the cell then
                 # it clears it and tries the next number
-                newPuzzle.setCell(row, col, 0) 
+                newPuzzle.setCell(row, col, 0)
 
         return False
 
@@ -155,15 +180,3 @@ class Puzzle:
             ]
         )
 
-
-# Imports puzzle from a file with 9 rows of 9 numbers representing the puzzle where 0 is an empty cell
-puzzle2D = []
-
-with open("puzzle.txt", "r") as file:
-    puzzle = file.read()
-    puzzle2D = [[int(col) for col in row] for row in puzzle.split("\n")]
-
-
-puzzleObj = Puzzle(puzzle2D)
-puzzleObj.solve()
-print(puzzleObj)
