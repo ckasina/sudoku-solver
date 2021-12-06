@@ -2,74 +2,86 @@ import pygame
 from solver import Puzzle
 
 class GUI:
+    # Initialising
     def __init__(self):
         self.initSizes()
-        self.initColors()
+        self.initFormatting()
+        self.initSpeed()
+        self.initSudokuStuff()
 
-        self.selectedCell = (None, None)
-        self.clockSpeed = 60
-        self.clock = pygame.time.Clock()
-        self.font = pygame.font.SysFont("Arial", self.cellSize // 2, bold=True)
-        self.puzzle = Puzzle()
-
-        self.cellPositions = [
-            [self.getCellRect(row, col) for col in range(self.cols)]
-            for row in range(self.rows)
-        ]
-
-        self.conflicts = []
-
-        self.title = "Sudoku Solver"
         self.window = pygame.display.set_mode((self.windowWidth, self.windowHeight))
         self.updateDisplay()
         self.mainloop()
 
     def initSizes(self):
-        self.rows = 9
-        self.cols = 9
+        self.rows = self.cols = 9
+        assert self.rows == self.cols
+        
         self.cellSize = 40
         self.borderSize = 2
         self.largeBorderSize = 5
-        self.windowWidth = (
+        self.windowWidth = self.windowHeight = (
             (self.cellSize * self.cols)
             + (self.borderSize * 6)
             + (self.largeBorderSize * 2)
         )
-        self.windowHeight = (
-            self.cellSize * self.rows
-            + (self.borderSize * 6)
-            + (self.largeBorderSize * 2)
-        )
 
-    def initColors(self):
+    def initFormatting(self):
+        self.font = pygame.font.SysFont("Arial", self.cellSize // 2, bold=True)
+        
         self.fontColor = (0, 0, 0)
         self.cellColor = (255, 255, 255)
         self.borderColor = (0, 0, 0)
         self.selectColor = (255, 255, 0)
         self.conflictColor = (255, 0, 0)
 
-    def getCellRect(self, row, col):
-        x = 0
-        y = 0
+        self.selectedCell = (None, None)
+        self.cellPositions = [
+            [self.getCellRect(row, col) for col in range(self.cols)]
+            for row in range(self.rows)
+        ]
+        self.conflicts = []
 
-        x += col * self.cellSize
+        self.title = "Sudoku Solver"
+        pygame.display.set_caption(self.title)
+
+    def initSpeed(self):
+        self.clockSpeed = 60
+        self.clock = pygame.time.Clock()
+
+    def initSudokuStuff(self):
+        self.puzzle = Puzzle()
+
+    def getCellRect(self, row, col):
         numBorders = col
         numLargeBorders = col // 3
         numNormalBorders = numBorders - numLargeBorders
+        x = (col * self.cellSize) + (self.borderSize * numNormalBorders) + (self.largeBorderSize * numLargeBorders)
 
-        x += self.borderSize * numNormalBorders
-        x += self.largeBorderSize * numLargeBorders
-
-        y += row * self.cellSize
         numBorders = row
         numLargeBorders = row // 3
         numNormalBorders = numBorders - numLargeBorders
-
-        y += self.borderSize * numNormalBorders
-        y += self.largeBorderSize * numLargeBorders
+        y = (row * self.cellSize) + (self.borderSize * numNormalBorders) + (self.largeBorderSize * numLargeBorders)
 
         return pygame.Rect(x, y, self.cellSize, self.cellSize)
 
+    def handleEvents(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                exit()
+
+            elif (
+                    event.type == pygame.MOUSEBUTTONDOWN
+                    and pygame.mouse.get_pressed()[0] # if left click
+                ):  
+                    self.mousePress(pygame.mouse.get_pos())
+                    
+
+            elif event.type == pygame.KEYDOWN:
+                self.keyPress(event.key)
+
+    # Visualize backtracking method
+    
     def drawCells(self):
         for row in range(self.rows):
             for col in range(self.cols):
@@ -166,20 +178,7 @@ class GUI:
     def mainloop(self):
         while True:
             self.clock.tick(self.clockSpeed)
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    exit()
-
-                elif (
-                    event.type == pygame.MOUSEBUTTONDOWN
-                    and pygame.mouse.get_pressed()[0] # if left click
-                ):  
-                    self.mousePress(pygame.mouse.get_pos())
-                    
-
-                elif event.type == pygame.KEYDOWN:
-                    self.keyPress(event.key)
-
+            self.handleEvents()
 
 pygame.init()
 window = GUI()
