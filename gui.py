@@ -20,13 +20,19 @@ class GUI:
         self.cellSize = 40
         self.borderSize = 2
         self.largeBorderSize = 5
-        self.windowWidth = self.windowHeight = (
+
+        self.gridWidth = self.gridHeight = (
             (self.cellSize * self.cols)
             + (self.borderSize * 6)
             + (self.largeBorderSize * 2)
         )
 
+        self.windowWidth = self.gridWidth
+        self.windowHeight = self.gridHeight + self.cellSize
+
     def initFormatting(self):
+        self.gridSurf = pygame.Surface((self.gridWidth, self.gridHeight))
+        self.solveSurf = pygame.Surface((self.gridWidth, self.cellSize))
         self.font = pygame.font.SysFont("Arial", self.cellSize // 2, bold=True)
         
         self.fontColor = (0, 0, 0)
@@ -51,6 +57,7 @@ class GUI:
 
     def initSudokuStuff(self):
         self.puzzle = Puzzle()
+        self.solving = False
 
     def getCellRect(self, row, col):
         numBorders = col
@@ -80,6 +87,7 @@ class GUI:
             elif event.type == pygame.KEYDOWN:
                 self.keyPress(event.key)
 
+
     # Visualize backtracking method
     
     def drawCells(self):
@@ -90,10 +98,10 @@ class GUI:
 
                 # Hilights the selected cell by mouse
                 if self.selectedCell != (row, col):
-                    pygame.draw.rect(self.window, self.cellColor, cellRect)
+                    pygame.draw.rect(self.gridSurf, self.cellColor, cellRect)
 
                 else:
-                    pygame.draw.rect(self.window, self.selectColor, cellRect)
+                    pygame.draw.rect(self.gridSurf, self.selectColor, cellRect)
 
                 # Draws the number
                 if num != 0:
@@ -107,12 +115,30 @@ class GUI:
                     textX = self.getCellRect(row, col).centerx - textRect.centerx
                     textY = self.getCellRect(row, col).centery - textRect.centery
 
-                    self.window.blit(textSurface, (textX, textY))
+                    self.gridSurf.blit(textSurface, (textX, textY))
+
+    def updateGridSurf(self):
+        self.gridSurf.fill(self.borderColor)
+        self.drawCells()
+        self.window.blit(self.gridSurf, (0, 0))
+
+    def updateSolveSurf(self):
+        self.solveSurf.fill(self.cellColor)
+        pygame.draw.rect(self.solveSurf, self.borderColor, (0, 0, self.gridWidth, self.cellSize), width=self.borderSize)
+        if self.solving:
+            textSurface = self.font.render("Solving...", True, self.fontColor)
+            textRect = textSurface.get_rect()
+            textX = (self.gridWidth // 2) - textRect.centerx
+            textY = (self.cellSize // 2) - textRect.centery
+
+            self.solveSurf.blit(textSurface, (textX, textY))
+
+        self.window.blit(self.solveSurf, (0, self.gridHeight))
 
     def updateDisplay(self):
         pygame.display.set_caption(self.title)
-        self.window.fill(self.borderColor)
-        self.drawCells()
+        self.updateGridSurf()
+        self.updateSolveSurf()
 
         pygame.display.update()
 
@@ -163,17 +189,20 @@ class GUI:
             self.updateDisplay()
             
         elif key == pygame.K_SPACE and len(self.puzzle.getConflicts()) == 0:
-            pygame.display.set_caption(f"{self.title} - Solving...")
-            pygame.display.update()
-            self.puzzle.solve()
-            self.selectedCell = (None, None)
-            self.updateDisplay()
+            self.solve()
 
         elif key == pygame.K_c:
             self.puzzle.clearPuzzle()
             self.conflicts = []
             self.updateDisplay()
 
+    def solve(self):
+        self.solving = True
+        self.updateDisplay()
+        self.puzzle.solve()
+        self.selectedCell = (None, None)
+        self.solving = False
+        self.updateDisplay()
 
     def mainloop(self):
         while True:
