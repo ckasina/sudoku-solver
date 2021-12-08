@@ -55,11 +55,14 @@ class GUI:
 
     def initSpeed(self):
         self.clockSpeed = 60
+        self.visualSolveDelay = 30
         self.clock = pygame.time.Clock()
 
     def initSudokuStuff(self):
         self.puzzle = Puzzle()
         self.solving = False
+        self.visualSolving = False
+        self.paused = False
 
     def getCellRect(self, row, col):
         numBorders = col
@@ -86,10 +89,62 @@ class GUI:
                     self.mousePress(pygame.mouse.get_pos())
                     
 
+            elif event.type == pygame.KEYDOWN and self.visualSolving:
+                self.keyPressSolving(event.key)
+
             elif event.type == pygame.KEYDOWN:
                 self.keyPress(event.key)
 
     # Visualize backtracking method
+    def visualSolve(self):
+        allSolvePos = self.puzzle.getEmptyCells()
+        self.visualSolving = True
+        self.updateDisplay()
+        self.visualBacktrack([])
+        self.selectedCell = (None, None)
+        self.visualSolving = False
+        self.updateDisplay(solvePos=allSolvePos)
+
+
+    def visualBacktrack(self, solvePos):
+        self.handleEvents()
+        while self.paused:
+            self.handleEvents()
+
+        row, col = self.puzzle.getNextEmpty()
+        if (row, col) == (None , None):
+            return True
+
+        pygame.time.delay(self.visualSolveDelay)
+        self.selectedCell = (row, col)
+        solvePos.append((row, col))
+        self.updateDisplay(solvePos=solvePos)
+
+        for num in self.puzzle.getCandidates(row, col):
+            self.puzzle.setCell(row, col, num)
+            self.selectedCell = (None, None)
+            
+            pygame.time.delay(self.visualSolveDelay)
+            self.updateDisplay(solvePos=solvePos)
+
+            if self.visualBacktrack(solvePos):
+                self.selectedCell = (row, col)
+                pygame.time.delay(self.visualSolveDelay)
+                self.updateDisplay(solvePos=solvePos)
+                self.selected = (None, None)
+
+                return True
+            else:
+                self.puzzle.setCell(row, col, 0)
+                
+                self.selectedCell = (row, col)
+                pygame.time.delay(self.visualSolveDelay)
+                self.updateDisplay(solvePos=solvePos)
+
+        self.selected = (None, None)
+
+        return False
+
     
     def drawCells(self, solvePos=[]):
         for row in range(self.rows):
@@ -135,8 +190,19 @@ class GUI:
     def updateSolveSurf(self):
         self.solveSurf.fill(self.cellColor)
         pygame.draw.rect(self.solveSurf, self.borderColor, (0, 0, self.gridWidth, self.cellSize), width=self.borderSize)
+        
+        textSurface = None
         if self.solving:
             textSurface = self.font.render("Solving...", True, self.fontColor)
+
+        elif self.visualSolving:
+            if self.paused:
+                textSurface = self.font.render(f"Paused", True, self.fontColor)
+            else:
+                textSurface = self.font.render(f"Solving with a time delay of {self.visualSolveDelay} ms...", True, self.fontColor)
+
+        
+        if self.solving or self.visualSolving:
             textRect = textSurface.get_rect()
             textX = (self.gridWidth // 2) - textRect.centerx
             textY = (self.cellSize // 2) - textRect.centery
@@ -165,6 +231,19 @@ class GUI:
                     
                     self.updateDisplay()
                     break
+
+    def keyPressSolving(self, key):
+        if (key in [pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN]):
+            if key == pygame.K_UP or key == pygame.K_RIGHT:
+                self.visualSolveDelay += 1
+
+            elif (key == pygame.K_DOWN or key == pygame.K_LEFT) and self.visualSolveDelay > 1:
+                self.visualSolveDelay -= 1
+
+        elif key == pygame.K_p:
+            self.paused = not self.paused
+            self.updateDisplay()
+            
 
     def keyPress(self, key):
         if self.selectedCell == (None, None): return
@@ -201,13 +280,16 @@ class GUI:
         elif key == pygame.K_SPACE and len(self.puzzle.getConflicts()) == 0:
             self.solve()
 
+        elif key == pygame.K_v and len(self.puzzle.getConflicts()) == 0:
+            self.visualSolve()
+
         elif key == pygame.K_c:
             self.puzzle.clearPuzzle()
             self.conflicts = []
             self.updateDisplay()
 
     def solve(self):
-        solvePos = [(row, col) for row in range(self.rows) for col in range(self.cols) if self.puzzle.getCell(row, col) == 0]
+        solvePos = self.puzzle.getEmptyCells()
         self.solving = True
         self.updateDisplay()
         self.puzzle.solve()
