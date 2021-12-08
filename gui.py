@@ -19,7 +19,7 @@ class GUI:
         
         self.cellSize = 40
         self.borderSize = 2
-        self.largeBorderSize = 5
+        self.largeBorderSize = 4
 
         self.gridWidth = self.gridHeight = (
             (self.cellSize * self.cols)
@@ -37,6 +37,7 @@ class GUI:
         
         self.fontColor = (0, 0, 0)
         self.cellColor = (255, 255, 255)
+        self.cellColor2 = (168, 168, 168)
         self.borderColor = (0, 0, 0)
         self.selectColor = (255, 255, 0)
         self.conflictColor = (255, 0, 0)
@@ -98,7 +99,13 @@ class GUI:
 
                 # Hilights the selected cell by mouse
                 if self.selectedCell != (row, col):
-                    pygame.draw.rect(self.gridSurf, self.cellColor, cellRect)
+                    if (((0 <= row <= 2) or (6 <= row <= 8)) and (3 <= col <= 5)) or\
+                    ((3 <= row <= 5) and (col < 3 or col > 5)):
+                        pygame.draw.rect(self.gridSurf, self.cellColor2, cellRect)
+
+                    else:
+                        pygame.draw.rect(self.gridSurf, self.cellColor, cellRect)
+
 
                 else:
                     pygame.draw.rect(self.gridSurf, self.selectColor, cellRect)
