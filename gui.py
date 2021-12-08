@@ -41,6 +41,7 @@ class GUI:
         self.borderColor = (0, 0, 0)
         self.selectColor = (255, 255, 0)
         self.conflictColor = (255, 0, 0)
+        self.solveColor = (29, 90, 196)
 
         self.selectedCell = (None, None)
         self.cellPositions = [
@@ -88,10 +89,9 @@ class GUI:
             elif event.type == pygame.KEYDOWN:
                 self.keyPress(event.key)
 
-
     # Visualize backtracking method
     
-    def drawCells(self):
+    def drawCells(self, solvePos=[]):
         for row in range(self.rows):
             for col in range(self.cols):
                 cellRect = self.getCellRect(row, col)
@@ -114,6 +114,9 @@ class GUI:
                 if num != 0:
                     if (row, col) in self.conflicts:
                         color = self.conflictColor
+
+                    elif (row, col) in solvePos:
+                        color = self.solveColor
                     else:
                         color = self.fontColor
 
@@ -124,9 +127,9 @@ class GUI:
 
                     self.gridSurf.blit(textSurface, (textX, textY))
 
-    def updateGridSurf(self):
+    def updateGridSurf(self, solvePos=[]):
         self.gridSurf.fill(self.borderColor)
-        self.drawCells()
+        self.drawCells(solvePos=solvePos)
         self.window.blit(self.gridSurf, (0, 0))
 
     def updateSolveSurf(self):
@@ -142,9 +145,9 @@ class GUI:
 
         self.window.blit(self.solveSurf, (0, self.gridHeight))
 
-    def updateDisplay(self):
+    def updateDisplay(self, solvePos=[]):
         pygame.display.set_caption(self.title)
-        self.updateGridSurf()
+        self.updateGridSurf(solvePos=solvePos)
         self.updateSolveSurf()
 
         pygame.display.update()
@@ -204,12 +207,13 @@ class GUI:
             self.updateDisplay()
 
     def solve(self):
+        solvePos = [(row, col) for row in range(self.rows) for col in range(self.cols) if self.puzzle.getCell(row, col) == 0]
         self.solving = True
         self.updateDisplay()
         self.puzzle.solve()
         self.selectedCell = (None, None)
         self.solving = False
-        self.updateDisplay()
+        self.updateDisplay(solvePos=solvePos)
 
     def mainloop(self):
         while True:
